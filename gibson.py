@@ -38,8 +38,9 @@ class Gibson(object):
         self.should_update = True
         self.view_resized()
 
-        self.stdscr.idcok(False)
-        self.stdscr.idlok(False)
+        # these might improve performace
+        #self.stdscr.idcok(False)
+        #self.stdscr.idlok(False)
 
     def update(self):
         self.activate_window()
@@ -84,8 +85,6 @@ class Window(object):
         self.win = curses.newwin(0,0,0,0)
         self.sub = None
         self.stage = self.X
-        self.win.idcok(False)
-        self.win.idlok(False)
 
     def setup(self):
         self.h, self.w, self.y, self.x = (1, 1, random.randint(self.kMIN_H, self.parent.height-self.kMIN_H), random.randint(self.kMIN_W, self.parent.width-self.kMIN_W))
@@ -135,7 +134,7 @@ class Window(object):
 
             self.win.box()
 
-            if at_max or (self.h >= self.kMIN_H and random.randint(0, 25) == 0):
+            if at_max or (self.h >= self.kMIN_H and random.randint(0, 20) == 0):
                 self.stage = self.C
                 self.sub = SubWindow(self)
 
@@ -145,7 +144,7 @@ class Window(object):
             self.update_window()
 
             self.win.border(1,1,1,curses.ACS_HLINE,1,1,1,1)
-            if at_max or (self.w >= self.kMIN_W and random.randint(0, 25) == 0): self.stage = self.B
+            if at_max or (self.w >= self.kMIN_W and random.randint(0, 10) == 0): self.stage = self.B
 
         self.win.noutrefresh()
 
@@ -172,8 +171,6 @@ class SubWindow(object):
         self.win = parent.win.subwin(self.h,self.w,self.y,self.x)
         self.full = self.alt = False
         self.set_type()
-        self.win.idcok(False)
-        self.win.idlok(False)
 
     def set_type(self):
         self.content = self.w * self.h * ('#' if random.randint(0, 5) == 0 else ' ' ) if random.randint(0, 2) == 0 else ''
