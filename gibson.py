@@ -174,7 +174,7 @@ class SubWindow(object):
 
     def set_type(self):
         self.content = self.w * self.h * ('#' if random.randint(0, 5) == 0 else ' ' ) if random.randint(0, 2) == 0 else ''
-        self.content_color = curses.color_pair(random.randint(0, self.parent.parent.color_range)) | random.choice([curses.A_STANDOUT, curses.A_BOLD])
+        self.content_color = curses.color_pair(random.randint(0, self.parent.parent.color_range)) | random.choice([0, curses.A_BOLD])
         self.main_set, self.alt_set = random.sample(['01', string.printable, string.ascii_letters+' '*50, string.hexdigits+' '*10], 2)
         self.full_type = random.choice([self.kTYPE_SCROLL, self.kTYPE_REPLACE])
         self.lifespan = random.randint(self.w,self.w*2) if self.full_type == self.kTYPE_SCROLL else random.randint(self.w*2, self.w*4)
