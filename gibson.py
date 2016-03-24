@@ -38,6 +38,9 @@ class Gibson(object):
         self.should_update = True
         self.view_resized()
 
+        self.stdscr.idcok(False)
+        self.stdscr.idlok(False)
+
     def update(self):
         self.activate_window()
         for window in self.active_windows: window.update()
@@ -81,6 +84,8 @@ class Window(object):
         self.win = curses.newwin(0,0,0,0)
         self.sub = None
         self.stage = self.X
+        self.win.idcok(False)
+        self.win.idlok(False)
 
     def setup(self):
         self.h, self.w, self.y, self.x = (1, 1, random.randint(self.kMIN_H, self.parent.height-self.kMIN_H), random.randint(self.kMIN_W, self.parent.width-self.kMIN_W))
@@ -130,7 +135,7 @@ class Window(object):
 
             self.win.box()
 
-            if at_max or (self.h >= self.kMIN_H and random.randint(0, 50) == 0):
+            if at_max or (self.h >= self.kMIN_H and random.randint(0, 25) == 0):
                 self.stage = self.C
                 self.sub = SubWindow(self)
 
@@ -167,6 +172,8 @@ class SubWindow(object):
         self.win = parent.win.subwin(self.h,self.w,self.y,self.x)
         self.full = self.alt = False
         self.set_type()
+        self.win.idcok(False)
+        self.win.idlok(False)
 
     def set_type(self):
         self.content = self.w * self.h * ('#' if random.randint(0, 5) == 0 else ' ' ) if random.randint(0, 2) == 0 else ''
@@ -221,8 +228,8 @@ class Driver(object):
         self.stdscr = stdscr
         curses.curs_set(0)
         curses.use_default_colors()
-        #curses.halfdelay(1)
-        self.stdscr.nodelay(1)
+        curses.halfdelay(1)
+        #self.stdscr.nodelay(1)
 
         self.gibson = Gibson(stdscr, args)
         self.running = False
@@ -235,7 +242,7 @@ class Driver(object):
         while self.running:
             self.gibson.update()
             self.update()
-            self.stdscr.timeout(75)
+            #self.stdscr.timeout(75)
 
     def update(self):
         try:
