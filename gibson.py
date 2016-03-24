@@ -174,7 +174,7 @@ class SubWindow(object):
 
     def set_type(self):
         self.content = self.w * self.h * ('#' if random.randint(0, 5) == 0 else ' ' ) if random.randint(0, 2) == 0 else ''
-        self.content_color = curses.color_pair(random.randint(0, self.parent.parent.color_range)) | random.choice([0, curses.A_BOLD])
+        self.content_color = curses.color_pair(random.randint(0, self.parent.parent.color_range)) | curses.A_BOLD if random.randint(0, 2) == 0 else 0
         self.main_set, self.alt_set = random.sample(['01', string.printable, string.ascii_letters+' '*50, string.hexdigits+' '*10], 2)
         self.full_type = random.choice([self.kTYPE_SCROLL, self.kTYPE_REPLACE])
         self.lifespan = random.randint(self.w,self.w*2) if self.full_type == self.kTYPE_SCROLL else random.randint(self.w*2, self.w*4)
@@ -203,7 +203,7 @@ class SubWindow(object):
             self.full = False
         except:
             self.full = True
-            if self.full_type == self.kTYPE_REPLACE: # or random.randint(0, 10) == 0:
+            if self.full_type == self.kTYPE_REPLACE:
                 self.alt = True
             pass
 
@@ -225,8 +225,8 @@ class Driver(object):
         self.stdscr = stdscr
         curses.curs_set(0)
         curses.use_default_colors()
-        curses.halfdelay(1)
-        #self.stdscr.nodelay(1)
+        #curses.halfdelay(1)
+        self.stdscr.nodelay(1)
 
         self.gibson = Gibson(stdscr, args)
         self.running = False
@@ -239,7 +239,7 @@ class Driver(object):
         while self.running:
             self.gibson.update()
             self.update()
-            #self.stdscr.timeout(75)
+            self.stdscr.timeout(25)
 
     def update(self):
         try:
