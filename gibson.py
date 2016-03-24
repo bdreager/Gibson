@@ -45,7 +45,7 @@ class Gibson(object):
         self.activate_window()
         for window in self.active_windows: window.update()
         if (self.verbose): self.debug_output()
-        self.stdscr.refresh()
+        curses.doupdate()
         if (len(self.to_remove)): self.remove_windows()
 
     def activate_window(self):
@@ -106,7 +106,7 @@ class Window(object):
         elif self.stage == self.D:
             self.win.attrset(self.parent.stage_D)
             self.win.erase()
-            self.win.refresh()
+            self.win.noutrefresh()
             self.w, self.x, at_min = self.shrink_1D(self.w, self.x, 3, self.kRATE)
 
             if at_min:
@@ -147,7 +147,7 @@ class Window(object):
             self.win.border(1,1,1,curses.ACS_HLINE,1,1,1,1)
             if at_max or (self.w >= self.kMIN_W and random.randint(0, 25) == 0): self.stage = self.B
 
-        self.win.refresh()
+        self.win.noutrefresh()
 
     def update_window(self):
         self.win.resize(self.h, self.w)
@@ -212,7 +212,7 @@ class SubWindow(object):
 
         if self.lifespan <= 0 and not self.full: self.lifespan = 1
 
-        self.win.refresh()
+        self.win.noutrefresh()
 
     def random_line(self, char_set, range):
         line = ''
