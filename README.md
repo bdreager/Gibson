@@ -1,2 +1,0 @@
-# Gibson
-Hackers on steroids
