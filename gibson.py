@@ -232,7 +232,7 @@ class Driver(object):
         self.delay_ms = 25
 
         self.gibson = Gibson(stdscr, args)
-        self.running = False
+        self.running, self.paused = (False, False)
 
     @property
     def delay_ms(self): return self._delay_ms
@@ -246,7 +246,7 @@ class Driver(object):
 
     def run(self):
         while self.running:
-            self.gibson.update()
+            if not self.paused: self.gibson.update()
             self.update()
             self.stdscr.timeout(self.delay_ms)
 
@@ -261,6 +261,7 @@ class Driver(object):
         if key == 'KEY_RESIZE': self.gibson.view_resized()
         elif key==self.kKEY_ESC or lower=='q': self.running = False
 
+        elif lower=='p': self.paused = not self.paused
 
         elif key=='-' or key=='_': self.delay_ms -= 5
         elif key=='=' or key=='+': self.delay_ms += 5
