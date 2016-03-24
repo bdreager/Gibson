@@ -221,6 +221,7 @@ class SubWindow(object):
 
 class Driver(object):
     kKEY_ESC = '\x1b'
+    kMIN_DELAY, kMAX_DELAY = (1, 100)
 
     def __init__(self, stdscr, args = None):
         self.stdscr = stdscr
@@ -228,9 +229,16 @@ class Driver(object):
         curses.use_default_colors()
         #curses.halfdelay(1)
         self.stdscr.nodelay(1)
+        self.delay_ms = 25
 
         self.gibson = Gibson(stdscr, args)
         self.running = False
+
+    @property
+    def delay_ms(self): return self._delay_ms
+    @delay_ms.setter
+    def delay_ms(self, value):
+        self._delay_ms = max(min(value, self.kMAX_DELAY), self.kMIN_DELAY)
 
     def start(self):
         self.running = True
@@ -240,7 +248,7 @@ class Driver(object):
         while self.running:
             self.gibson.update()
             self.update()
-            self.stdscr.timeout(25)
+            self.stdscr.timeout(self.delay_ms)
 
     def update(self):
         try:
@@ -252,6 +260,10 @@ class Driver(object):
         lower = key.lower()
         if key == 'KEY_RESIZE': self.gibson.view_resized()
         elif key==self.kKEY_ESC or lower=='q': self.running = False
+
+
+        elif key=='-' or key=='_': self.delay_ms -= 5
+        elif key=='=' or key=='+': self.delay_ms += 5
 
 def main(stdscr=None, args=init_args()):
     if not stdscr:
