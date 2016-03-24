@@ -95,12 +95,12 @@ class Window(object):
 
         elif self.stage == self.E:
             self.parent.set_remove(self)
-            self.win.clear()
+            self.win.erase()
             self.stage = self.X
 
         elif self.stage == self.D:
             self.win.attrset(self.parent.stage_D)
-            self.win.clear()
+            self.win.erase()
             self.win.refresh()
             self.w, self.x, at_min = self.shrink_1D(self.w, self.x, 3, self.kRATE)
 
@@ -123,7 +123,7 @@ class Window(object):
 
         elif self.stage == self.B:
             self.win.attrset(self.parent.stage_B)
-            self.win.clear()
+            self.win.erase()
 
             self.h, self.y, at_max = self.expand_1D(self.h, self.y, self.parent.height, self.kRATE)
             self.update_window()
@@ -179,7 +179,7 @@ class SubWindow(object):
         #TODO cleanup this hot mess
         self.lifespan -= 1
         if self.full or self.alt:
-            self.win.clear()
+            self.win.erase()
 
             if self.full_type == self.kTYPE_SCROLL:
                 a = 1
