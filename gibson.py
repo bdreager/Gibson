@@ -78,7 +78,7 @@ class Window(object):
     X, A, B, C, D, E = (0, 1, 2, 3, 4, 5) #I know this is stupid
     kMIN_W = 10
     kMIN_H = 20
-    kRATE = 4
+    kRATE = 2
 
     def __init__(self, parent):
         self.parent = parent
@@ -174,7 +174,8 @@ class SubWindow(object):
 
     def set_type(self):
         self.content = self.w * self.h * ('#' if random.randint(0, 5) == 0 else ' ' ) if random.randint(0, 2) == 0 else ''
-        self.content_color = curses.color_pair(random.randint(0, self.parent.parent.color_range)) | curses.A_BOLD if random.randint(0, 2) == 0 else 0
+        self.content_color = curses.color_pair(random.randint(0, self.parent.parent.color_range))
+        if random.randint(0, 4) == 0: self.content_color = self.content_color | curses.A_BOLD
         self.main_set, self.alt_set = random.sample(['01', string.printable, string.ascii_letters+' '*50, string.hexdigits+' '*10], 2)
         self.full_type = random.choice([self.kTYPE_SCROLL, self.kTYPE_REPLACE])
         self.lifespan = random.randint(self.w,self.w*2) if self.full_type == self.kTYPE_SCROLL else random.randint(self.w*2, self.w*4)
