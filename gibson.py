@@ -39,57 +39,64 @@ class Gibson(object):
         self.view_resized()
 
     def update(self):
-        self.spawn_window()
-        for window in self.windows: window.update()
+        self.activate_window()
+        for window in self.active_windows: window.update()
         if (self.verbose): self.debug_output()
         self.stdscr.refresh()
         if (len(self.to_remove)): self.remove_windows()
 
-    def spawn_window(self):
-        if self.should_update or len(self.windows) < self.max_windows:
-            self.windows.append(Window(self))
+    def activate_window(self):
+        if self.should_update or len(self.active_windows) < self.max_active_windows:
+            self.active_windows.append(self.inactive_windows.pop(0))
             self.should_update = False
 
     def set_remove(self, window):
         self.to_remove.append(window)
 
     def remove_windows(self):
-        self.windows = [x for x in self.windows if x not in self.to_remove]
+        self.active_windows = [x for x in self.active_windows if x not in self.to_remove]
+        self.inactive_windows.extend(self.to_remove)
         self.to_remove = []
 
     def debug_output(self):
-        self.stdscr.addstr(0, 0, 'w:[{}], h:[{}] mw:[{}] w:[{}]'.format(self.width, self.height, self.max_windows, len(self.windows)))
+        self.stdscr.addstr(0, 0, 'w:[{}], h:[{}] mw:[{}] w:[{}]'.format(self.width, self.height, self.max_active_windows, len(self.windows)))
 
     def view_resized(self):
         self.height, self.width = self.stdscr.getmaxyx()
         self.stdscr.clear()
         self.stdscr.refresh()
-        self.windows = []
-        self.max_windows = round(((self.height + self.width)/2) * 0.05)
-        #TODO cache windows to prevent garbage collection (max_windows * 2)
+        self.max_active_windows = int(round(((self.height + self.width)/2) * 0.05))
+        self.inactive_windows = [Window(self) for _ in range(self.max_active_windows*2)]
+        self.active_windows = []
         self.should_update = True
 
 class Window(object):
-    A, B, C, D, E = (1, 2, 3, 4, 5)
+    X, A, B, C, D, E = (0, 1, 2, 3, 4, 5) #I know this is stupid
     kMIN_W = 10
     kMIN_H = 20
     kRATE = 4
 
     def __init__(self, parent):
         self.parent = parent
-        self.h, self.w, self.y, self.x = (1, 1, random.randint(self.kMIN_H, parent.height-self.kMIN_H), random.randint(self.kMIN_W, parent.width-self.kMIN_W))
-        self.win = curses.newwin(self.h, self.w, self.y, self.x)
+        self.win = curses.newwin(0,0,0,0)
         self.sub = None
+        self.stage = self.X
+
+    def setup(self):
+        self.h, self.w, self.y, self.x = (1, 1, random.randint(self.kMIN_H, self.parent.height-self.kMIN_H), random.randint(self.kMIN_W, self.parent.width-self.kMIN_W))
+        self.update_window()
         self.stage = self.A
-        self.content = ''
 
     def update(self):
         #TODO cleanup this hot mess
 
-        if self.stage == self.E:
+        if self.stage == self.X:
+            self.setup()
+
+        elif self.stage == self.E:
             self.parent.set_remove(self)
             self.win.clear()
-            self.content_win = None
+            self.stage = self.X
 
         elif self.stage == self.D:
             self.win.attrset(self.parent.stage_D)
