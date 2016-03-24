@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 __program__ = 'Gibson'
-__version__ = '0.3.0'
+__version__ = '0.3.1'
 __description__ = 'Hackers on steroids'
 
 import os, curses, locale, random, string
@@ -38,7 +38,7 @@ class Gibson(object):
         self.should_update = True
         self.view_resized()
 
-        # these might improve performace
+        # these might improve performance
         #self.stdscr.idcok(False)
         #self.stdscr.idlok(False)
 
@@ -63,7 +63,7 @@ class Gibson(object):
         self.to_remove = []
 
     def debug_output(self):
-        self.stdscr.addstr(0, 0, 'w:[{}], h:[{}] mw:[{}] w:[{}]'.format(self.width, self.height, self.max_active_windows, len(self.windows)))
+        self.stdscr.addstr(0, 0, 'w:[{}], h:[{}] mawin:[{}] awin:[{}] iwin:[{}]'.format(self.width, self.height, self.max_active_windows, len(self.active_windows), len(self.inactive_windows)))
 
     def view_resized(self):
         self.height, self.width = self.stdscr.getmaxyx()
