@@ -173,7 +173,7 @@ class SubWindow(object):
         self.set_type()
 
     def set_type(self):
-        self.content = self.w * self.h * ('#' if random.randint(0, 5) == 0 else ' ' ) if random.randint(0, 2) == 0 else ''
+        self.content = '' if random.randint(0, 3) == 0 else self.w * self.h * ('#' if random.randint(0, 5) == 0 else ' ' )
         self.content_color = curses.color_pair(random.randint(0, self.parent.parent.color_range))
         if random.randint(0, 4) == 0: self.content_color = self.content_color | curses.A_BOLD
         self.main_set, self.alt_set = random.sample(['01', string.printable, string.ascii_letters+' '*50, string.hexdigits+' '*10], 2)
