@@ -5,8 +5,9 @@ __program__ = 'Gibson'
 __version__ = '0.3.1'
 __description__ = 'Hackers on steroids'
 
-import os, curses, locale, random, string
+import os, curses, locale, string
 from argconfparse import ArgConfParser
+from random import randint, choice, sample, randrange
 locale.setlocale(locale.LC_ALL, '') # for displaying the unicode characters using ncurses
 
 def init_args():
@@ -33,7 +34,9 @@ class Gibson(object):
         self.stage_B = curses.color_pair(4) | curses.A_BOLD
         self.stage_C = curses.color_pair(3) | curses.A_BOLD
         self.stage_D = curses.color_pair(2) | curses.A_BOLD
+        self.text_color = curses.color_pair(4)
 
+        self.random_colors = False
         self.verbose = False
         self.should_update = True
         self.view_resized()
@@ -65,6 +68,9 @@ class Gibson(object):
     def debug_output(self):
         self.stdscr.addstr(0, 0, 'w:[{}], h:[{}] mawin:[{}] awin:[{}] iwin:[{}]'.format(self.width, self.height, self.max_active_windows, len(self.active_windows), len(self.inactive_windows)))
 
+    def random_color(self):
+        return curses.color_pair(randint(0, self.color_range))
+
     def view_resized(self):
         self.height, self.width = self.stdscr.getmaxyx()
         self.stdscr.clear()
@@ -75,57 +81,56 @@ class Gibson(object):
         self.should_update = True
 
 class Window(object):
-    X, A, B, C, D, E = (0, 1, 2, 3, 4, 5) #I know this is stupid
-    kMIN_W = 10
-    kMIN_H = 20
+    kS_LIMBO, kS_EXPAND_W, kS_EXPAND_H, kS_PRINT, kS_SHRINK, kS_FINISH = (0, 1, 2, 3, 4, 5)
+    kMIN_W, kMIN_H = (4, 4)
     kRATE = 2
 
     def __init__(self, parent):
         self.parent = parent
         self.win = curses.newwin(0,0,0,0)
         self.sub = None
-        self.stage = self.X
+        self.stage = self.kS_LIMBO
 
     def setup(self):
-        self.h, self.w, self.y, self.x = (1, 1, random.randint(self.kMIN_H, self.parent.height-self.kMIN_H), random.randint(self.kMIN_W, self.parent.width-self.kMIN_W))
+        self.h, self.w, self.y, self.x = (1, 1, randint(self.kMIN_H, self.parent.height-self.kMIN_H), randint(self.kMIN_W, self.parent.width-self.kMIN_W))
         self.update_window()
-        self.stage = self.A
+        self.stage = self.kS_EXPAND_W
 
     def update(self):
         #TODO cleanup this hot mess
 
-        if self.stage == self.X:
+        if self.stage == self.kS_LIMBO:
             self.setup()
 
-        elif self.stage == self.E:
+        elif self.stage == self.kS_FINISH:
             self.parent.set_remove(self)
             self.win.erase()
-            self.stage = self.X
+            self.stage = self.kS_LIMBO
 
-        elif self.stage == self.D:
+        elif self.stage == self.kS_SHRINK:
             self.win.attrset(self.parent.stage_D)
             self.win.erase()
             self.win.noutrefresh()
             self.w, self.x, at_min = self.shrink_1D(self.w, self.x, 3, self.kRATE)
 
             if at_min:
-                self.stage = self.E
+                self.stage = self.kS_FINISH
                 self.win.border(curses.ACS_VLINE,1,1,1,1,1,1,1)
             else:
                 self.update_window()
                 self.win.box()
 
-        elif self.stage == self.C:
+        elif self.stage == self.kS_PRINT:
             self.win.attrset(self.parent.stage_C)
             self.sub.update()
 
-            if self.sub.lifespan <= 0 and random.randint(0, 10) == 0:
-                self.stage = self.D
+            if self.sub.lifespan <= 0 and randint(0, 10) == 0:
+                self.stage = self.kS_SHRINK
                 self.parent.should_update = True
 
             self.win.box()
 
-        elif self.stage == self.B:
+        elif self.stage == self.kS_EXPAND_H:
             self.win.attrset(self.parent.stage_B)
             self.win.erase()
 
@@ -134,17 +139,17 @@ class Window(object):
 
             self.win.box()
 
-            if at_max or (self.h >= self.kMIN_H and random.randint(0, 20) == 0):
-                self.stage = self.C
+            if at_max or (self.h >= self.kMIN_H and randint(0, 20) == 0):
+                self.stage = self.kS_PRINT
                 self.sub = SubWindow(self)
 
-        else:
+        elif self.stage == self.kS_EXPAND_W:
             self.win.attrset(self.parent.stage_A)
             self.w, self.x, at_max = self.expand_1D(self.w, self.x, self.parent.width, self.kRATE)
             self.update_window()
 
             self.win.border(1,1,1,curses.ACS_HLINE,1,1,1,1)
-            if at_max or (self.w >= self.kMIN_W and random.randint(0, 10) == 0): self.stage = self.B
+            if at_max or (self.w >= self.kMIN_W and randint(0, 10) == 0): self.stage = self.kS_EXPAND_H
 
         self.win.noutrefresh()
 
@@ -173,12 +178,12 @@ class SubWindow(object):
         self.set_type()
 
     def set_type(self):
-        self.content = '' if random.randint(0, 3) == 0 else self.w * self.h * ('#' if random.randint(0, 5) == 0 else ' ' )
-        self.content_color = curses.color_pair(random.randint(0, self.parent.parent.color_range))
-        if random.randint(0, 4) == 0: self.content_color = self.content_color | curses.A_BOLD
-        self.main_set, self.alt_set = random.sample(['01', string.printable, string.ascii_letters+' '*50, string.hexdigits+' '*10], 2)
-        self.full_type = random.choice([self.kTYPE_SCROLL, self.kTYPE_REPLACE])
-        self.lifespan = random.randint(self.w,self.w*2) if self.full_type == self.kTYPE_SCROLL else random.randint(self.w*2, self.w*4)
+        self.content = '' if randint(0, 3) == 0 else self.w * self.h * ('#' if randint(0, 5) == 0 else ' ' )
+        self.content_color = curses.color_pair(randint(0, self.parent.parent.color_range)) if self.parent.parent.random_colors else self.parent.parent.text_color
+        if randint(0, 4) == 0: self.content_color = self.content_color | curses.A_BOLD
+        self.main_set, self.alt_set = sample(['01', string.printable, string.ascii_letters+' '*50, string.hexdigits+' '*10], 2)
+        self.full_type = choice([self.kTYPE_SCROLL, self.kTYPE_REPLACE])
+        self.lifespan = randint(self.w,self.w*2) if self.full_type == self.kTYPE_SCROLL else randint(self.w*2, self.w*4)
 
     def update(self):
         #TODO cleanup this hot mess
@@ -189,15 +194,15 @@ class SubWindow(object):
             if self.full_type == self.kTYPE_SCROLL:
                 a = 1
                 self.content = self.content[self.w:]
-                self.content += self.random_line(self.main_set, range(random.randrange(1, self.w)))
+                self.content += self.random_line(self.main_set, range(randrange(1, self.w)))
 
             elif self.full_type == self.kTYPE_REPLACE:
                 line = self.random_line(self.alt_set, range(self.w))
-                target = random.randint(0, self.h) * self.w
+                target = randint(0, self.h) * self.w
                 self.content = self.content[:target] + line + self.content[target+self.w:]
 
         else:
-            self.content += self.random_line(self.main_set, range(random.randrange(1, self.w)))
+            self.content += self.random_line(self.main_set, range(randrange(1, self.w)))
 
         try: # if this fails, we know the view is full
             self.win.addstr(0,0,self.content, self.content_color)
@@ -215,7 +220,7 @@ class SubWindow(object):
     def random_line(self, char_set, range):
         line = ''
         for _ in range:
-            line += random.choice(char_set)
+            line += choice(char_set)
 
         return line
 
@@ -262,6 +267,8 @@ class Driver(object):
         elif key==self.kKEY_ESC or lower=='q': self.running = False
 
         elif lower=='p': self.paused = not self.paused
+        elif key=='c': self.gibson.random_colors = not self.gibson.random_colors
+        elif key=='C': self.gibson.text_color = self.gibson.random_color()
 
         elif key=='-' or key=='_': self.delay_ms -= 5
         elif key=='=' or key=='+': self.delay_ms += 5
