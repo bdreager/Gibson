@@ -41,10 +41,6 @@ class Gibson(object):
         self.should_update = True
         self.view_resized()
 
-        # these might improve performance
-        #self.stdscr.idcok(False)
-        #self.stdscr.idlok(False)
-
     def update(self):
         self.activate_window()
         for window in self.active_windows: window.update()
@@ -54,6 +50,7 @@ class Gibson(object):
 
     def activate_window(self):
         if self.should_update or len(self.active_windows) < self.max_active_windows:
+            if len(self.inactive_windows) == 0: self.inactive_windows.append(Window(self))
             self.active_windows.append(self.inactive_windows.pop(0))
             self.should_update = False
 
@@ -76,8 +73,7 @@ class Gibson(object):
         self.stdscr.clear()
         self.stdscr.refresh()
         self.max_active_windows = int(round(((self.height + self.width)/2) * 0.05))
-        self.inactive_windows = [Window(self) for _ in range(self.max_active_windows*2)]
-        self.active_windows = []
+        self.inactive_windows, self.active_windows = ([], [])
         self.should_update = True
 
 class Window(object):
@@ -265,6 +261,7 @@ class Driver(object):
         lower = key.lower()
         if key == 'KEY_RESIZE': self.gibson.view_resized()
         elif key==self.kKEY_ESC or lower=='q': self.running = False
+        elif lower=='v': self.gibson.verbose = not self.gibson.verbose
 
         elif lower=='p': self.paused = not self.paused
         elif key=='c': self.gibson.random_colors = not self.gibson.random_colors
