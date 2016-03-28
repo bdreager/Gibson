@@ -6,12 +6,12 @@ __version__ = '0.3.1'
 __description__ = 'Hackers on steroids'
 
 import os, curses, locale, string
-from argconfparse import ArgConfParser
+from argparse import ArgumentParser
 from random import randint, choice, sample, randrange
 locale.setlocale(locale.LC_ALL, '') # for displaying the unicode characters using ncurses
 
 def init_args():
-    parser = ArgConfParser(prog=__program__, description=__description__)
+    parser = ArgumentParser(prog=__program__, description=__description__)
     parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
     return parser.parse_args()
 
