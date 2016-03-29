@@ -5,92 +5,34 @@ __program__ = 'Gibson'
 __version__ = '0.3.1'
 __description__ = 'Hackers on steroids'
 
-import os, curses, locale, string
+import os, curses, string
 from argparse import ArgumentParser
 from random import randint, choice, sample, randrange
-locale.setlocale(locale.LC_ALL, '') # for displaying the unicode characters using ncurses
 
 def init_args():
     parser = ArgumentParser(prog=__program__, description=__description__)
     parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
     return parser.parse_args()
 
-class Gibson(object):
-
-    def __init__(self, stdscr, args=None):
-        self.stdscr = stdscr
-
-        try: # needed for terminals with limited color support
-            for i in range(256):
-                curses.init_pair(i+1, i, -1)
-                self.color_range = i
-        except:
-            pass
-
-        self.windows = []
-        self.to_remove = []
-
-        self.stage_A = curses.color_pair(5) | curses.A_BOLD
-        self.stage_B = curses.color_pair(4) | curses.A_BOLD
-        self.stage_C = curses.color_pair(3) | curses.A_BOLD
-        self.stage_D = curses.color_pair(2) | curses.A_BOLD
-        self.text_color = curses.color_pair(4)
-
-        self.random_colors = False
-        self.verbose = False
-        self.should_update = True
-        self.view_resized()
-
-    def update(self):
-        self.activate_window()
-        for window in self.active_windows: window.update()
-        if (self.verbose): self.debug_output()
-        curses.doupdate()
-        if (len(self.to_remove)): self.remove_windows()
-
-    def activate_window(self):
-        if self.should_update or len(self.active_windows) < self.max_active_windows:
-            if len(self.inactive_windows) == 0: self.inactive_windows.append(Window(self))
-            self.active_windows.append(self.inactive_windows.pop(0))
-            self.should_update = False
-
-    def set_remove(self, window):
-        self.to_remove.append(window)
-
-    def remove_windows(self):
-        self.active_windows = [x for x in self.active_windows if x not in self.to_remove]
-        self.inactive_windows.extend(self.to_remove)
-        self.to_remove = []
-
-    def debug_output(self):
-        self.stdscr.addstr(0, 0, 'w:[{}], h:[{}] mawin:[{}] awin:[{}] iwin:[{}]'.format(self.width, self.height, self.max_active_windows, len(self.active_windows), len(self.inactive_windows)))
-
-    def random_color(self):
-        return curses.color_pair(randint(0, self.color_range))
-
-    def view_resized(self):
-        self.height, self.width = self.stdscr.getmaxyx()
-        self.stdscr.clear()
-        self.stdscr.refresh()
-        self.max_active_windows = int(round(((self.height + self.width)/2) * 0.05))
-        self.inactive_windows, self.active_windows = ([], [])
-        self.should_update = True
-
 class Window(object):
     kS_LIMBO, kS_EXPAND_W, kS_EXPAND_H, kS_PRINT, kS_SHRINK, kS_FINISH = (0, 1, 2, 3, 4, 5)
-    kMIN_W, kMIN_H = (4, 4)
+    kMIN_W, kMIN_H, kMIN_ABS = (10, 20, 4)
+
     kRATE = 2
 
     def __init__(self, parent):
         self.parent = parent
         self.win = curses.newwin(0,0,0,0)
-        self.sub = None
         self.stage = self.kS_LIMBO
 
     def setup(self):
-        self.h, self.w, self.y, self.x = (1, 1, randint(self.kMIN_H, self.parent.height-self.kMIN_H), randint(self.kMIN_W, self.parent.width-self.kMIN_W))
+        self.h, self.w, self.y, self.x = self.random_frame()
         self.update_window()
         self.stage = self.kS_EXPAND_W
+
+    def random_frame(self):
+        try:    return (1,1,randint(self.kMIN_H, self.parent.height-self.kMIN_H), randint(self.kMIN_W, self.parent.width-self.kMIN_W))
+        except: return (1,1,randint(self.kMIN_ABS, self.parent.height-self.kMIN_ABS), randint(self.kMIN_ABS, self.parent.width-self.kMIN_ABS))
 
     def update(self):
         #TODO cleanup this hot mess
@@ -188,7 +130,6 @@ class SubWindow(object):
             self.win.erase()
 
             if self.full_type == self.kTYPE_SCROLL:
-                a = 1
                 self.content = self.content[self.w:]
                 self.content += self.random_line(self.main_set, range(randrange(1, self.w)))
 
@@ -220,6 +161,75 @@ class SubWindow(object):
 
         return line
 
+class Gibson(object):
+    kMIN_H, kMIN_W = (Window.kMIN_ABS * 2, Window.kMIN_ABS * 2)
+
+    def __init__(self, stdscr, args=None):
+        self.stdscr = stdscr
+
+        try: # needed for terminals with limited color support
+            for i in range(256):
+                curses.init_pair(i+1, i, -1)
+                self.color_range = i
+        except:
+            pass
+
+        self.windows = []
+        self.to_remove = []
+
+        self.stage_A = curses.color_pair(5) | curses.A_BOLD
+        self.stage_B = curses.color_pair(4) | curses.A_BOLD
+        self.stage_C = curses.color_pair(3) | curses.A_BOLD
+        self.stage_D = curses.color_pair(2) | curses.A_BOLD
+        self.text_color = curses.color_pair(4)
+
+        self.random_colors = False
+        self.verbose = False
+        self.should_update = True
+        self.view_resized()
+
+    def update(self):
+        if self.max_active_windows:
+            self.activate_window()
+            for window in self.active_windows: window.update()
+            if (self.verbose): self.debug_output()
+            if (len(self.to_remove)): self.remove_windows()
+
+        curses.doupdate()
+
+    def activate_window(self):
+        if self.should_update or len(self.active_windows) < self.max_active_windows:
+            if len(self.inactive_windows) == 0: self.inactive_windows.append(Window(self))
+            self.active_windows.append(self.inactive_windows.pop(0))
+            self.should_update = False
+
+    def set_remove(self, window):
+        self.to_remove.append(window)
+
+    def remove_windows(self):
+        self.active_windows = [x for x in self.active_windows if x not in self.to_remove]
+        self.inactive_windows.extend(self.to_remove)
+        self.to_remove = []
+
+    def debug_output(self):
+        self.stdscr.addstr(0, 0, 'w:[{}], h:[{}] mawin:[{}] awin:[{}] iwin:[{}]'.format(self.width, self.height, self.max_active_windows, len(self.active_windows), len(self.inactive_windows)))
+
+    def random_color(self):
+        return curses.color_pair(randint(0, self.color_range))
+
+    def view_resized(self):
+        self.height, self.width = self.stdscr.getmaxyx()
+        self.stdscr.clear()
+        self.stdscr.refresh()
+
+        if self.height >= self.kMIN_H and self.width >= self.kMIN_W:
+            self.max_active_windows = int(round(((self.height + self.width)/2) * 0.05))
+            self.inactive_windows, self.active_windows = ([], [])
+            self.should_update = True
+        else:
+            self.max_active_windows = 0;
+            self.stdscr.addstr(0,0,'Window too small. h[{} vs {}] w[{} vs {}]'.format(self.height, self.kMIN_H, self.width, self.kMIN_W))
+
 class Driver(object):
     kKEY_ESC = '\x1b'
     kMIN_DELAY, kMAX_DELAY = (1, 100)
@@ -228,7 +238,6 @@ class Driver(object):
         self.stdscr = stdscr
         curses.curs_set(0)
         curses.use_default_colors()
-        #curses.halfdelay(1)
         self.stdscr.nodelay(1)
         self.delay_ms = 25
 
