@@ -1,5 +1,8 @@
 Gibson
 ======
+Hackers on steroids
+
+.. image:: https://cloud.githubusercontent.com/assets/8732474/14165138/9864551a-f6d3-11e5-9fd0-8cfe5f1dd3ff.gif
 
 What
 ~~~~
