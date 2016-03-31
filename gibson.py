@@ -2,8 +2,13 @@
 # -*- coding: utf-8 -*-
 
 __program__ = 'Gibson'
-__version__ = '0.3.1'
+__version__ = '0.5.0'
 __description__ = 'Hackers on steroids'
+__author__ = 'Brandon Dreager'
+__author_email__ ='gibson@subol.es'
+__copyright__ = 'Copyright (c) 2016 Brandon Dreager'
+__license__ = 'MIT'
+__website__ = 'https://github.com/Regaerd/Gibson'
 
 import os, curses, string
 from argparse import ArgumentParser
@@ -17,13 +22,19 @@ def init_args():
 class Window(object):
     kS_LIMBO, kS_EXPAND_W, kS_EXPAND_H, kS_PRINT, kS_SHRINK, kS_FINISH = (0, 1, 2, 3, 4, 5)
     kMIN_W, kMIN_H, kMIN_ABS = (10, 20, 4)
-
     kRATE = 2
 
     def __init__(self, parent):
         self.parent = parent
         self.win = curses.newwin(0,0,0,0)
         self.stage = self.kS_LIMBO
+
+    @property
+    def stage(self): return self._stage
+    @stage.setter
+    def stage(self, value):
+        self._stage = value
+        self.win.attrset(self.parent.attributes[self._stage])
 
     def setup(self):
         self.h, self.w, self.y, self.x = self.random_frame()
@@ -35,61 +46,56 @@ class Window(object):
         except: return (1,1,randint(self.kMIN_ABS, self.parent.height-self.kMIN_ABS), randint(self.kMIN_ABS, self.parent.width-self.kMIN_ABS))
 
     def update(self):
-        #TODO cleanup this hot mess
-
-        if self.stage == self.kS_LIMBO:
-            self.setup()
-
-        elif self.stage == self.kS_FINISH:
-            self.parent.set_remove(self)
-            self.win.erase()
-            self.stage = self.kS_LIMBO
-
-        elif self.stage == self.kS_SHRINK:
-            self.win.attrset(self.parent.stage_D)
-            self.win.erase()
-            self.win.noutrefresh()
-            self.w, self.x, at_min = self.shrink_1D(self.w, self.x, 3, self.kRATE)
-
-            if at_min:
-                self.stage = self.kS_FINISH
-                self.win.border(curses.ACS_VLINE,1,1,1,1,1,1,1)
-            else:
-                self.update_window()
-                self.win.box()
-
-        elif self.stage == self.kS_PRINT:
-            self.win.attrset(self.parent.stage_C)
-            self.sub.update()
-
-            if self.sub.lifespan <= 0 and randint(0, 10) == 0:
-                self.stage = self.kS_SHRINK
-                self.parent.should_update = True
-
-            self.win.box()
-
-        elif self.stage == self.kS_EXPAND_H:
-            self.win.attrset(self.parent.stage_B)
-            self.win.erase()
-
-            self.h, self.y, at_max = self.expand_1D(self.h, self.y, self.parent.height, self.kRATE)
-            self.update_window()
-
-            self.win.box()
-
-            if at_max or (self.h >= self.kMIN_H and randint(0, 20) == 0):
-                self.stage = self.kS_PRINT
-                self.sub = SubWindow(self)
-
-        elif self.stage == self.kS_EXPAND_W:
-            self.win.attrset(self.parent.stage_A)
-            self.w, self.x, at_max = self.expand_1D(self.w, self.x, self.parent.width, self.kRATE)
-            self.update_window()
-
-            self.win.border(1,1,1,curses.ACS_HLINE,1,1,1,1)
-            if at_max or (self.w >= self.kMIN_W and randint(0, 10) == 0): self.stage = self.kS_EXPAND_H
-
+        self.kSTAGES[self.stage](self)
         self.win.noutrefresh()
+
+    def stage_limbo(self):
+        self.setup()
+
+    def stage_expand_w(self):
+        self.w, self.x, at_max = self.expand_1D(self.w, self.x, self.parent.width, self.kRATE)
+        self.update_window()
+
+        self.win.border(1,1,1,curses.ACS_HLINE,1,1,1,1)
+        if at_max or (self.w >= self.kMIN_W and randint(0, 10) == 0): self.stage = self.kS_EXPAND_H
+
+    def stage_expand_h(self):
+        self.win.erase()
+
+        self.h, self.y, at_max = self.expand_1D(self.h, self.y, self.parent.height, self.kRATE)
+        self.update_window()
+
+        self.win.box()
+
+        if at_max or (self.h >= self.kMIN_H and randint(0, 20) == 0):
+            self.stage = self.kS_PRINT
+            self.sub = SubWindow(self)
+
+    def stage_print(self):
+        self.sub.update()
+
+        if self.sub.lifespan <= 0 and randint(0, 10) == 0:
+            self.stage = self.kS_SHRINK
+            self.parent.should_update = True
+
+        self.win.box()
+
+    def stage_shrink(self):
+        self.win.erase()
+        self.win.noutrefresh()
+        self.w, self.x, at_min = self.shrink_1D(self.w, self.x, 3, self.kRATE)
+
+        if at_min:
+            self.stage = self.kS_FINISH
+            self.win.border(curses.ACS_VLINE,1,1,1,1,1,1,1)
+        else:
+            self.update_window()
+            self.win.box()
+
+    def stage_finish(self):
+        self.parent.set_remove(self)
+        self.win.erase()
+        self.stage = self.kS_LIMBO
 
     def update_window(self):
         self.win.resize(self.h, self.w)
@@ -104,6 +110,8 @@ class Window(object):
         new_size = size + rate
         new_pos = pos - rate/2
         return (size, pos, True) if new_pos < 0 or new_pos + new_size > bounds else (new_size, new_pos, False)
+
+    kSTAGES = {kS_LIMBO:stage_limbo, kS_EXPAND_W:stage_expand_w, kS_EXPAND_H:stage_expand_h, kS_PRINT:stage_print, kS_SHRINK:stage_shrink, kS_FINISH:stage_finish}
 
 class SubWindow(object):
     kTYPE_SCROLL, kTYPE_REPLACE = (1, 0)
@@ -155,11 +163,7 @@ class SubWindow(object):
         self.win.noutrefresh()
 
     def random_line(self, char_set, range):
-        line = ''
-        for _ in range:
-            line += choice(char_set)
-
-        return line
+        return ''.join([choice(char_set) for _ in range])
 
 class Gibson(object):
     kMIN_H, kMIN_W = (Window.kMIN_ABS * 2, Window.kMIN_ABS * 2)
@@ -174,13 +178,7 @@ class Gibson(object):
         except:
             pass
 
-        self.windows = []
-        self.to_remove = []
-
-        self.stage_A = curses.color_pair(5) | curses.A_BOLD
-        self.stage_B = curses.color_pair(4) | curses.A_BOLD
-        self.stage_C = curses.color_pair(3) | curses.A_BOLD
-        self.stage_D = curses.color_pair(2) | curses.A_BOLD
+        self.attributes = {Window.kS_LIMBO:0,Window.kS_EXPAND_W:curses.color_pair(5),Window.kS_EXPAND_H:curses.color_pair(4),Window.kS_PRINT:curses.color_pair(3),Window.kS_SHRINK:curses.color_pair(2),Window.kS_FINISH:curses.color_pair(2)}
         self.text_color = curses.color_pair(4)
 
         self.random_colors = False
@@ -224,10 +222,10 @@ class Gibson(object):
 
         if self.height >= self.kMIN_H and self.width >= self.kMIN_W:
             self.max_active_windows = int(round(((self.height + self.width)/2) * 0.05))
-            self.inactive_windows, self.active_windows = ([], [])
+            self.inactive_windows, self.active_windows, self.to_remove = ([], [], [])
             self.should_update = True
         else:
-            self.max_active_windows = 0;
+            self.max_active_windows = 0
             self.stdscr.addstr(0,0,'Window too small. h[{} vs {}] w[{} vs {}]'.format(self.height, self.kMIN_H, self.width, self.kMIN_W))
 
 class Driver(object):
