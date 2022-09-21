@@ -99,7 +99,7 @@ class Window(object):
 
     def update_window(self):
         self.win.resize(self.h, self.w)
-        self.win.mvwin(self.y, self.x)
+        self.win.mvwin(int(self.y), int(self.x))
 
     def shrink_1D(self, size, pos, bounds, rate):
         new_size = size - rate
@@ -119,7 +119,7 @@ class SubWindow(object):
     def __init__(self, parent):
         self.parent = parent
         self.h, self.w, self.y, self.x = (parent.h-2, parent.w-2, parent.y+1, parent.x+1)
-        self.win = parent.win.subwin(self.h,self.w,self.y,self.x)
+        self.win = parent.win.subwin(self.h,self.w,int(self.y),int(self.x))
         self.full = self.alt = False
         self.set_type()
 
