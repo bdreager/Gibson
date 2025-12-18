@@ -1,0 +1,7 @@
+[project]
+name = "gibson"
+version = "1.0.0"
+description = "Hackers on steroids"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = []
